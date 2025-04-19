@@ -24,6 +24,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [formError, setFormError] = useState('');
+  const [redirecting, setRedirecting] = useState(false);
   const { login, loading, error, clearError, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -35,10 +36,17 @@ const Login: React.FC = () => {
   
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate(from);
+    if (isAuthenticated && !loading) {
+      setRedirecting(true);
+      // Add a small delay before navigating to ensure all state changes have been processed
+      const redirectTimer = setTimeout(() => {
+        // Force a page reload instead of using React Router navigation
+        window.location.href = from;
+      }, 300);
+      
+      return () => clearTimeout(redirectTimer);
     }
-  }, [isAuthenticated, navigate, from]);
+  }, [isAuthenticated, loading, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +67,24 @@ const Login: React.FC = () => {
       // Error is handled by the auth context
     }
   };
+
+  // Show a redirecting message while transitioning
+  if (redirecting) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '60vh' 
+      }}>
+        <Loader />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Redirecting you...
+        </Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box
