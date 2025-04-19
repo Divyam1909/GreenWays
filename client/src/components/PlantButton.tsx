@@ -12,6 +12,10 @@ interface PlantButtonProps {
   variant?: "primary" | "secondary" | "outlined";
   size?: "small" | "medium" | "large";
   fullWidth?: boolean;
+  component?: React.ElementType;
+  to?: string;
+  startIcon?: React.ReactNode;
+  [x: string]: any; // Allow any other props
 }
 
 interface LeafIconProps {
@@ -56,7 +60,11 @@ const PlantButton: React.FC<PlantButtonProps> = ({
   className,
   variant = "primary",
   size = "medium",
-  fullWidth = false
+  fullWidth = false,
+  component,
+  startIcon,
+  to,
+  ...rest
 }) => {
   const muiTheme = useMuiTheme();
   const { mode } = useAppTheme();
@@ -65,9 +73,10 @@ const PlantButton: React.FC<PlantButtonProps> = ({
     switch(variant) {
       case "secondary":
         return {
-          bg: mode === 'dark' ? muiTheme.palette.secondary.dark : muiTheme.palette.secondary.main,
-          text: mode === 'dark' ? '#fff' : '#181818',
-          hover: mode === 'dark' ? muiTheme.palette.secondary.main : muiTheme.palette.secondary.light,
+          bg: muiTheme.palette.primary.dark,
+          text: '#fff',
+          hover: muiTheme.palette.primary.main,
+          border: 'none',
           leafColors: {
             leaf1: "#98ee99",
             leaf2: "#81c784",
@@ -78,10 +87,10 @@ const PlantButton: React.FC<PlantButtonProps> = ({
         };
       case "outlined":
         return {
-          bg: 'transparent',
-          text: mode === 'dark' ? muiTheme.palette.primary.light : muiTheme.palette.primary.main,
-          border: `2px solid ${mode === 'dark' ? muiTheme.palette.primary.light : muiTheme.palette.primary.main}`,
-          hover: mode === 'dark' ? 'rgba(102, 187, 106, 0.1)' : 'rgba(46, 125, 50, 0.1)',
+          bg: muiTheme.palette.primary.dark,
+          text: '#fff',
+          border: 'none',
+          hover: muiTheme.palette.primary.main,
           leafColors: {
             leaf1: "#7B9B3A",
             leaf2: "#556729",
@@ -92,9 +101,10 @@ const PlantButton: React.FC<PlantButtonProps> = ({
         };
       default:
         return {
-          bg: mode === 'dark' ? muiTheme.palette.primary.dark : muiTheme.palette.primary.main,
+          bg: muiTheme.palette.primary.dark,
           text: '#fff',
-          hover: mode === 'dark' ? muiTheme.palette.primary.main : muiTheme.palette.primary.dark,
+          border: 'none',
+          hover: muiTheme.palette.primary.main,
           leafColors: {
             leaf1: "#98ee99",
             leaf2: "#81c784",
@@ -117,27 +127,33 @@ const PlantButton: React.FC<PlantButtonProps> = ({
   const colors = getColors();
   const sizing = getSizing();
   
+  // Use the component prop if provided, otherwise use a button
+  const Component = component || 'button';
+  
   return (
     <StyledWrapper 
-      className={className}
+      className={className ? `plant-button-wrapper ${className}` : 'plant-button-wrapper'}
       colors={colors}
       sizing={sizing}
       fullWidth={fullWidth}
       isDark={mode === 'dark'}
     >
-      <button 
-        type={type} 
+      <Component 
+        type={component ? undefined : type} 
         onClick={onClick} 
         disabled={disabled}
         className={variant}
+        to={to}
+        {...rest}
       >
+        {startIcon && <span className="start-icon">{startIcon}</span>}
         {children}
         <LeafIcon className="icon-1" />
         <LeafIcon2 className="icon-2" />
         <LeafIcon3 className="icon-3" />
         <LeafIcon4 className="icon-4" />
         <LeafIcon5 className="icon-5" />
-      </button>
+      </Component>
     </StyledWrapper>
   );
 };
@@ -152,8 +168,18 @@ interface StyledWrapperProps {
 const StyledWrapper = styled.div<StyledWrapperProps>`
   display: ${props => props.fullWidth ? 'block' : 'inline-block'};
   width: ${props => props.fullWidth ? '100%' : 'auto'};
+  position: relative;
+  isolation: isolate; /* Create a new stacking context */
   
-  button {
+  .start-icon {
+    margin-right: 8px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  button, a {
     position: relative;
     padding: ${props => props.sizing.padding};
     background: ${props => props.colors.bg};
@@ -166,15 +192,20 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     transition: all .3s ease-in-out;
     cursor: pointer;
     width: ${props => props.fullWidth ? '100%' : 'auto'};
-    overflow: hidden;
+    overflow: visible;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    text-decoration: none;
+    z-index: 1;
     
     &:hover {
       background: ${props => props.colors.hover};
       border-radius: 8px 8px 24px 24px;
       box-shadow: ${props => props.isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.15)'};
+      transform: translateY(-3px);
+      color: #ffffff;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.2);
     }
     
     &:disabled {
@@ -197,18 +228,19 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     width: 0px;
     height: auto;
     transition: all .5s ease-in-out;
+    pointer-events: none;
+    z-index: 20; /* Higher than anything else */
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
   }
   
-  .icon-1 { z-index: -1; }
-  .icon-2, .icon-3, .icon-4, .icon-5 { z-index: -2; }
-
-  button:not(:disabled):hover .icon-1 {
+  button:not(:disabled):hover .icon-1, 
+  a:not(:disabled):hover .icon-1 {
     top: -250%;
     left: 50%;
     transform: translate(-50%, 0);
     width: 50px;
     height: auto;
-    animation: inIcon1 1s ease .45s forwards;
+    animation: inIcon1 1s ease .15s forwards;
   }
 
   @keyframes inIcon1 {
@@ -234,14 +266,15 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     }
   }
 
-  button:not(:disabled):hover .icon-2 {
+  button:not(:disabled):hover .icon-2,
+  a:not(:disabled):hover .icon-2 {
     position: absolute;
     top: -200%;
     left: 90%;
     transform: translate(-50%, 0);
     width: 75px;
     height: auto;
-    animation: inIcon2 1s ease .45s forwards;
+    animation: inIcon2 1s ease .15s forwards;
   }
 
   @keyframes inIcon2 {
@@ -267,14 +300,15 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     }
   }
 
-  button:not(:disabled):hover .icon-3 {
+  button:not(:disabled):hover .icon-3,
+  a:not(:disabled):hover .icon-3 {
     position: absolute;
     top: -130%;
     left: 20%;
     transform: translate(-50%, 0);
     width: 60px;
     height: auto;
-    animation: inIcon3 1s ease .45s forwards;
+    animation: inIcon3 1s ease .15s forwards;
   }
 
   @keyframes inIcon3 {
@@ -292,14 +326,15 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     }
   }
 
-  button:not(:disabled):hover .icon-4 {
+  button:not(:disabled):hover .icon-4,
+  a:not(:disabled):hover .icon-4 {
     position: absolute;
     top: -300%;
     left: 10%;
     transform: translate(-50%, 0);
     width: 85px;
     height: auto;
-    animation: inIcon4 1s ease .45s forwards;
+    animation: inIcon4 1s ease .15s forwards;
   }
 
   @keyframes inIcon4 {
@@ -317,14 +352,15 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     }
   }
 
-  button:not(:disabled):hover .icon-5 {
+  button:not(:disabled):hover .icon-5,
+  a:not(:disabled):hover .icon-5 {
     position: absolute;
     top: -350%;
     left: 90%;
     transform: translate(-50%, 0);
     width: 85px;
     height: auto;
-    animation: inIcon5 1s ease .45s forwards;
+    animation: inIcon5 1s ease .15s forwards;
   }
 
   @keyframes inIcon5 {

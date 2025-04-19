@@ -32,6 +32,7 @@ import Loader from './Loader';
 import PlantButton from './PlantButton';
 import ThemeToggle from './ThemeToggle';
 import { useTheme } from '@mui/material/styles';
+import logoImage from '../greenways.png';
 
 const StyledAppBar = styled(AppBar)<{ $darkmode: string }>`
   background-color: ${props => props.$darkmode === 'true' ? 'rgba(27, 94, 32, 0.95)' : 'rgba(46, 125, 50, 0.95)'};
@@ -45,9 +46,17 @@ const LogoContainer = styled.div`
   align-items: center;
   cursor: pointer;
   transition: transform 0.2s ease;
+  height: 90px;
+  padding: 8px 0;
   
   &:hover {
     transform: scale(1.02);
+  }
+  
+  img {
+    height: 88px;
+    width: auto;
+    object-fit: contain;
   }
 `;
 
@@ -56,6 +65,9 @@ const StyledLink = styled(Link)`
   color: inherit;
   transition: all 0.3s ease;
   margin: 0 10px;
+  position: relative;
+  overflow: visible;
+  display: block;
 
   &:hover {
     color: #98ee99;
@@ -167,10 +179,7 @@ const Navbar: React.FC = () => {
         <Container maxWidth="xl">
           <Toolbar sx={{ p: isSmall ? '8px 0' : '8px' }}>
             <LogoContainer onClick={goToHome}>
-              <NatureIcon sx={{ mr: 1, fontSize: 32 }} />
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                GreenWays
-              </Typography>
+              <img src={logoImage} alt="GreenWays Logo" />
             </LogoContainer>
             <Box sx={{ flexGrow: 1 }} />
             <Box sx={{ width: 40, height: 40, display: 'flex', alignItems: 'center' }}>
@@ -188,10 +197,7 @@ const Navbar: React.FC = () => {
         <Container maxWidth="xl">
           <Toolbar sx={{ p: isSmall ? '8px 0' : '8px' }}>
             <LogoContainer onClick={goToHome}>
-              <NatureIcon sx={{ mr: 1, fontSize: 32 }} />
-              <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                GreenWays
-              </Typography>
+              <img src={logoImage} alt="GreenWays Logo" />
             </LogoContainer>
             
             <Box sx={{ flexGrow: 1 }} />
@@ -237,7 +243,7 @@ const Navbar: React.FC = () => {
                   <>
                     <ThemeToggle />
                     <StyledLink to="/login">
-                      <PlantButton variant="outlined" size="small">
+                      <PlantButton size="small">
                         Login
                       </PlantButton>
                     </StyledLink>

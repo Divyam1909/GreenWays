@@ -19,11 +19,21 @@ import { checkApiHealth } from './services/api';
 import './App.css';
 
 function AppContent() {
-  const { loading } = useAuth();
+  const { loading: authLoading, isAuthenticated } = useAuth();
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isServerConnected, setIsServerConnected] = useState(true);
   const [isCheckingServer, setIsCheckingServer] = useState(true);
   const [retryCount, setRetryCount] = useState(0);
+  const [lastAuthState, setLastAuthState] = useState(isAuthenticated);
+
+  // Force rerender when auth state changes
+  useEffect(() => {
+    if (lastAuthState !== isAuthenticated) {
+      setLastAuthState(isAuthenticated);
+      // Force a component update
+      console.log("Authentication state changed, triggering update");
+    }
+  }, [isAuthenticated, lastAuthState]);
 
   useEffect(() => {
     // Check server connection
@@ -62,19 +72,23 @@ function AppContent() {
       checkServerConnection();
     }
     
-    // Add a slight delay to ensure smooth loading experience
+    // Add a slight delay to ensure smooth loading experience but don't wait too long
     const timer = setTimeout(() => {
       setIsInitialLoading(false);
-    }, 1000);
+    }, 500); // Reduced from 1000ms to 500ms for faster startup
 
     return () => clearTimeout(timer);
   }, [retryCount]);
+
+  // Only show loader when really needed (initial app load or server check)
+  // Don't include authLoading here to prevent the infinite loading issue
+  const isLoading = isInitialLoading || isCheckingServer;
 
   const handleRetryConnection = () => {
     setRetryCount(prev => prev + 1);
   };
 
-  if (isInitialLoading || loading || isCheckingServer) {
+  if (isLoading) {
     return (
       <Box 
         sx={{ 

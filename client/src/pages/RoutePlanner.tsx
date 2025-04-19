@@ -22,6 +22,9 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import DirectionsTransitIcon from '@mui/icons-material/DirectionsTransit';
+import TrainIcon from '@mui/icons-material/Train';
+import DirectionsBusIcon from '@mui/icons-material/DirectionsBus';
+import FlightIcon from '@mui/icons-material/Flight';
 import LocalGasStationIcon from '@mui/icons-material/LocalGasStation';
 import SpeedIcon from '@mui/icons-material/Speed';
 import NatureIcon from '@mui/icons-material/Nature';
@@ -92,11 +95,12 @@ interface RoutePlannerProps {}
 
 const RoutePlanner: React.FC<RoutePlannerProps> = () => {
   const theme = useTheme();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [loading, setLoading] = useState(false);
+  const [directionsLoading, setDirectionsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [routeOptions, setRouteOptions] = useState<RouteOption[]>([]);
   const [selectedRoute, setSelectedRoute] = useState<RouteOption | null>(null);
@@ -139,6 +143,12 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
         return <DirectionsBikeIcon />;
       case 'transit':
         return <DirectionsTransitIcon />;
+      case 'train':
+        return <TrainIcon />;
+      case 'bus':
+        return <DirectionsBusIcon />;
+      case 'airplane':
+        return <FlightIcon />;
       default:
         return <DirectionsCarIcon />;
     }
@@ -146,6 +156,7 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
 
   // Format the mode name for display
   const formatModeName = (mode: string) => {
+    if (mode === 'airplane') return 'Flight';
     return mode.charAt(0).toUpperCase() + mode.slice(1);
   };
 
@@ -193,20 +204,44 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
   const fetchDirections = useCallback((origin: string, destination: string, mode: string) => {
     if (!window.google) return;
     
-    const directionsService = new google.maps.DirectionsService();
+    setDirectionsLoading(true);
     
+    // For airplane mode, we simply don't show directions on the map
+    if (mode === 'airplane') {
+      setDirections(null);
+      setDirectionsLoading(false);
+      return;
+    }
+    
+    // For train and bus, use transit mode with Google
+    const googleMode = (mode === 'train' || mode === 'bus') ? 'transit' : mode;
+    
+    // Additional parameters for transit modes
+    const transitParams: { [key: string]: string } = {};
+    if (googleMode === 'transit') {
+      if (mode === 'train') {
+        transitParams.transit_mode = 'train';
+      } else if (mode === 'bus') {
+        transitParams.transit_mode = 'bus';
+      }
+    }
+    
+    const directionsService = new google.maps.DirectionsService();
     directionsService.route(
       {
         origin,
         destination,
-        travelMode: mode.toUpperCase() as google.maps.TravelMode
+        travelMode: googleMode.toUpperCase() as google.maps.TravelMode,
+        ...transitParams
       },
       (result, status) => {
-        if (status === google.maps.DirectionsStatus.OK) {
+        if (status === 'OK') {
           setDirections(result);
         } else {
           console.error(`Error fetching directions: ${status}`);
+          setError(`Could not display route map: ${status}`);
         }
+        setDirectionsLoading(false);
       }
     );
   }, []);
@@ -304,6 +339,35 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
     setDestAutocomplete(autocomplete);
   };
 
+  // Don't put hooks inside conditionals - move the authLoading check inside the useEffect
+  useEffect(() => {
+    if (!authLoading && user) {
+      // This forces a component update
+      const timer = setTimeout(() => {
+        console.log("Route planner ready, user authenticated:", user.name);
+      }, 10);
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading, user]);
+
+  // Display loading screen during authentication check
+  if (authLoading) {
+    return <Box 
+      sx={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        minHeight: '70vh' 
+      }}
+    >
+      <Loader />
+      <Typography variant="h6" sx={{ mt: 2 }}>
+        Preparing your route planner...
+      </Typography>
+    </Box>;
+  }
+  
   return (
     <Box
       component={motion.div}

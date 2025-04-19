@@ -10,7 +10,20 @@ const EMISSIONS = {
   BICYCLING: 0.0,
   WALKING: 0.0,
   TRAIN: 0.035,
+  BUS: 0.068, // Specific bus emission value
+  AIRPLANE: 0.255, // Airplane/flight emission
   CARPOOLING: 0.096 // Assuming 2 people in car
+};
+
+// Transportation mode mapping (Google API supported modes and our custom modes)
+const MODE_MAPPING = {
+  DRIVING: 'driving',
+  WALKING: 'walking',
+  BICYCLING: 'bicycling',
+  TRANSIT: 'transit',
+  TRAIN: 'train',      // Custom mode (will use transit API + filtering)
+  BUS: 'bus',          // Custom mode (will use transit API + filtering)
+  AIRPLANE: 'airplane' // Custom mode (will use direct distance calculation)
 };
 
 // Route response interface
@@ -33,6 +46,26 @@ interface RouteResponse {
   isFastest: boolean;
 }
 
+// Helper function declarations
+function calculateFlightDuration(distanceKm: number): string {
+  // Assume average flight speed of 800 km/h
+  // Add 1.5 hours for boarding, taxiing, etc.
+  const flightHours = distanceKm / 800;
+  const totalHours = flightHours + 1.5;
+  
+  const hours = Math.floor(totalHours);
+  const minutes = Math.round((totalHours - hours) * 60);
+  
+  return `${hours} h ${minutes} min`;
+}
+
+function calculateFlightDurationSeconds(distanceKm: number): number {
+  const flightHours = distanceKm / 800;
+  const totalHours = flightHours + 1.5;
+  
+  return Math.round(totalHours * 3600); // Convert to seconds
+}
+
 // Get all possible route options between two locations
 export const getRouteOptions = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -44,18 +77,21 @@ export const getRouteOptions = async (req: Request, res: Response): Promise<void
     }
 
     // Get routes for different transportation modes
-    const modes = ['driving', 'transit', 'bicycling', 'walking'];
-    const routePromises = modes.map(mode => 
+    const googleApiModes = ['driving', 'transit', 'bicycling', 'walking'];
+    const routePromises = googleApiModes.map(mode => 
       getRouteFromGoogleMaps(origin, destination, mode)
     );
 
     const routeResults = await Promise.all(routePromises);
     
+    // Initialize enhanced routes array
+    let enhancedRoutes: RouteResponse[] = [];
+    
     // Process and enhance routes with carbon emissions data
-    const enhancedRoutes = routeResults.map((route, index) => {
+    enhancedRoutes = routeResults.map((route, index) => {
       if (!route) return null;
       
-      const mode = modes[index];
+      const mode = googleApiModes[index];
       const distanceInKm = route.distance.value / 1000;
       const carbonEmission = calculateCarbonEmission(distanceInKm, mode);
       
@@ -67,7 +103,48 @@ export const getRouteOptions = async (req: Request, res: Response): Promise<void
         isFastest: false   // Will be determined later
       };
     }).filter(Boolean) as RouteResponse[];
-
+    
+    // Add train route if transit data is available
+    const transitRoute = enhancedRoutes.find(route => route.mode === 'transit');
+    if (transitRoute) {
+      // Create a train route based on the transit route
+      const trainRoute: RouteResponse = {
+        ...JSON.parse(JSON.stringify(transitRoute)),
+        mode: 'train',
+        carbonEmission: calculateCarbonEmission(transitRoute.distance.value / 1000, 'train')
+      };
+      enhancedRoutes.push(trainRoute);
+      
+      // Create a bus route based on the transit route
+      const busRoute: RouteResponse = {
+        ...JSON.parse(JSON.stringify(transitRoute)),
+        mode: 'bus',
+        carbonEmission: calculateCarbonEmission(transitRoute.distance.value / 1000, 'bus')
+      };
+      enhancedRoutes.push(busRoute);
+    }
+    
+    // Add airplane route for longer distances (over 100km)
+    const drivingRoute = enhancedRoutes.find(route => route.mode === 'driving');
+    if (drivingRoute && drivingRoute.distance.value > 100000) { // 100km threshold
+      // Create an airplane route with direct distance (slightly shorter than driving)
+      const flightDistanceKm = (drivingRoute.distance.value * 0.8) / 1000; // Estimate as 80% of driving distance
+      const airplaneRoute: RouteResponse = {
+        ...JSON.parse(JSON.stringify(drivingRoute)),
+        mode: 'airplane',
+        distance: {
+          text: `${Math.round(flightDistanceKm)} km`,
+          value: Math.round(flightDistanceKm * 1000)
+        },
+        duration: {
+          text: calculateFlightDuration(flightDistanceKm),
+          value: calculateFlightDurationSeconds(flightDistanceKm)
+        },
+        carbonEmission: calculateCarbonEmission(flightDistanceKm, 'airplane')
+      };
+      enhancedRoutes.push(airplaneRoute);
+    }
+    
     // Determine fastest and greenest routes
     if (enhancedRoutes.length > 0) {
       // Find fastest route (min duration)
@@ -264,9 +341,14 @@ async function getRouteFromGoogleMaps(origin: string, destination: string, mode:
 }
 
 function calculateCarbonEmission(distanceInKm: number, mode: string): number {
+  // Convert mode to uppercase for matching with EMISSIONS keys
   const modeKey = mode.toUpperCase() as keyof typeof EMISSIONS;
+  
+  // Get emission factor or default to driving if not found
   const emissionFactor = EMISSIONS[modeKey] || EMISSIONS.DRIVING;
-  return parseFloat((distanceInKm * emissionFactor).toFixed(2));
+  
+  // Return emission with 2 decimal places
+  return Number((distanceInKm * emissionFactor).toFixed(2));
 }
 
 function generateRecommendations(routes: RouteResponse[]): string[] {
@@ -279,22 +361,37 @@ function generateRecommendations(routes: RouteResponse[]): string[] {
   // Mode-specific recommendations
   const hasDriving = routes.some(r => r.mode === 'driving');
   const hasTransit = routes.some(r => r.mode === 'transit');
+  const hasTrain = routes.some(r => r.mode === 'train');
   const hasBiking = routes.some(r => r.mode === 'bicycling');
   const hasWalking = routes.some(r => r.mode === 'walking');
+  const hasAirplane = routes.some(r => r.mode === 'airplane');
   
   if (hasDriving && (hasBiking || hasWalking)) {
     const bikingOrWalking = hasBiking ? 'biking' : 'walking';
     recommendations.push(`Switching from driving to ${bikingOrWalking} could eliminate your carbon emissions for this route.`);
   }
   
-  if (hasDriving && hasTransit) {
-    const transitRoute = routes.find(r => r.mode === 'transit');
+  if (hasDriving && (hasTransit || hasTrain)) {
+    const transitRoute = routes.find(r => r.mode === 'transit') || routes.find(r => r.mode === 'train');
     const drivingRoute = routes.find(r => r.mode === 'driving');
     
     if (transitRoute && drivingRoute) {
       const emissionsSaved = drivingRoute.carbonEmission - transitRoute.carbonEmission;
       if (emissionsSaved > 0) {
-        recommendations.push(`Taking public transit instead of driving could save approximately ${emissionsSaved.toFixed(2)} kg of CO2 emissions.`);
+        const transitMode = transitRoute.mode === 'transit' ? 'public transit' : 'train';
+        recommendations.push(`Taking ${transitMode} instead of driving could save approximately ${emissionsSaved.toFixed(2)} kg of CO2 emissions.`);
+      }
+    }
+  }
+  
+  if (hasAirplane && hasTrain) {
+    const airplaneRoute = routes.find(r => r.mode === 'airplane');
+    const trainRoute = routes.find(r => r.mode === 'train');
+    
+    if (airplaneRoute && trainRoute) {
+      const emissionsSaved = airplaneRoute.carbonEmission - trainRoute.carbonEmission;
+      if (emissionsSaved > 0) {
+        recommendations.push(`Taking a train instead of flying could save approximately ${emissionsSaved.toFixed(2)} kg of CO2 emissions.`);
       }
     }
   }

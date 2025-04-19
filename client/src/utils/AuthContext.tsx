@@ -13,7 +13,7 @@ interface AuthContextType {
   loading: boolean;
   error: string | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -57,10 +57,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await loginUser({ email, password });
       
       if (response.user && response.token) {
-        setUser(response.user);
-        setIsAuthenticated(true);
+        // First update localStorage
         localStorage.setItem('user', JSON.stringify(response.user));
         localStorage.setItem('token', response.token);
+        
+        // Explicitly set loading to false before updating auth state
+        // to ensure components know loading is done before handling auth changes
+        setLoading(false);
+        
+        // Then update the authentication state
+        setUser(response.user);
+        setIsAuthenticated(true);
+        
+        return true;
       } else {
         throw new Error('Invalid response from server');
       }
@@ -69,8 +78,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                           (err instanceof Error ? err.message : 'An error occurred during login');
       setError(errorMessage);
       console.error('Login error:', err);
-    } finally {
       setLoading(false);
+      return false;
     }
   };
 

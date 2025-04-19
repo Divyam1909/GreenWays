@@ -15,6 +15,8 @@ import SaveIcon from '@mui/icons-material/Save';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import { motion } from 'framer-motion';
 import { useAuth } from '../utils/AuthContext';
+import PlantButton from '../components/PlantButton';
+import cycleImage from '../cycle.png';
 
 const MotionBox = motion(Box);
 const MotionPaper = motion(Paper);
@@ -87,50 +89,55 @@ const Home: React.FC = () => {
               : 'Discover eco-friendly routes and reduce your carbon footprint with our intelligent green navigation solution.'}
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Button
-              component={Link}
-              to="/planner"
-              variant="contained"
-              size="large"
-              color="primary"
-              startIcon={<ExploreIcon />}
-              sx={{ borderRadius: 2, px: 3 }}
-            >
-              {user ? 'New Route' : 'Plan Your Route'}
-            </Button>
             {user ? (
-              <Button
-                component={Link}
-                to="/saved-routes"
-                variant="outlined"
-                size="large"
-                color="primary"
-                startIcon={<SaveIcon />}
-                sx={{ borderRadius: 2, px: 3 }}
-              >
-                My Routes
-              </Button>
+              <>
+                <PlantButton
+                  component={Link}
+                  to="/planner"
+                  size="large"
+                  startIcon={<ExploreIcon />}
+                >
+                  New Route
+                </PlantButton>
+                <PlantButton
+                  component={Link}
+                  to="/saved-routes"
+                  variant="outlined"
+                  size="large"
+                  startIcon={<SaveIcon />}
+                >
+                  My Routes
+                </PlantButton>
+              </>
             ) : (
-              <Button
-                component={Link}
-                to="/register"
-                variant="outlined"
-                size="large"
-                color="primary"
-                sx={{ borderRadius: 2, px: 3 }}
-              >
-                Sign Up Free
-              </Button>
+              <>
+                <PlantButton
+                  component={Link}
+                  to="/planner"
+                  size="large"
+                  startIcon={<ExploreIcon />}
+                >
+                  Plan Your Route
+                </PlantButton>
+                <PlantButton
+                  component={Link}
+                  to="/register"
+                  size="large"
+                  sx={{ fontWeight: 'bold' }}
+                >
+                  Sign Up For Free
+                </PlantButton>
+              </>
             )}
           </Box>
         </Box>
 
         <Box 
           component="img"
-          src="/assets/green-transport.jpg" 
-          alt="Green Transportation"
+          src={cycleImage}
+          alt="Eco-friendly Cycling"
           sx={{
-            maxWidth: { xs: '100%', md: '50%' },
+            maxWidth: { xs: '60%', md: '30%' },
             height: 'auto',
             borderRadius: 4,
             boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
@@ -277,25 +284,14 @@ const Home: React.FC = () => {
         <Typography variant="h6" sx={{ mb: 4, maxWidth: '800px', mx: 'auto' }}>
           Start planning your eco-friendly routes today and contribute to a healthier planet.
         </Typography>
-        <Button
+        <PlantButton
           component={Link}
-          to="/planner"
-          variant="contained"
+          to={user ? "/planner" : "/login"}
           size="large"
-          sx={{
-            borderRadius: 2,
-            px: 4,
-            py: 1.5,
-            backgroundColor: 'white',
-            color: theme.palette.primary.dark,
-            '&:hover': {
-              backgroundColor: theme.palette.primary.dark,
-              color: 'white'
-            }
-          }}
+          variant="secondary"
         >
-          Get Started
-        </Button>
+          {user ? "Start Planning" : "Login to Get Started"}
+        </PlantButton>
       </MotionBox>
     </Container>
   );

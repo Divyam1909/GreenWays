@@ -27,6 +27,9 @@ import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
 import DirectionsWalkIcon from '@mui/icons-material/DirectionsWalk';
 import DirectionsBikeIcon from '@mui/icons-material/DirectionsBike';
 import DirectionsTransitIcon from '@mui/icons-material/DirectionsTransit';
+import TrainIcon from '@mui/icons-material/Train';
+import DirectionsBusIcon from '@mui/icons-material/DirectionsBus';
+import FlightIcon from '@mui/icons-material/Flight';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import PlaceIcon from '@mui/icons-material/Place';
 import EventIcon from '@mui/icons-material/Event';
@@ -185,6 +188,12 @@ const SavedRoutes: React.FC = () => {
         return <DirectionsBikeIcon sx={{ color: theme.palette.primary.main }} />;
       case 'transit':
         return <DirectionsTransitIcon sx={{ color: theme.palette.primary.main }} />;
+      case 'train':
+        return <TrainIcon sx={{ color: theme.palette.primary.main }} />;
+      case 'bus':
+        return <DirectionsBusIcon sx={{ color: theme.palette.primary.main }} />;
+      case 'airplane':
+        return <FlightIcon sx={{ color: theme.palette.primary.main }} />;
       default:
         return <DirectionsCarIcon sx={{ color: theme.palette.primary.main }} />;
     }
@@ -192,6 +201,7 @@ const SavedRoutes: React.FC = () => {
 
   // Format mode name for display
   const formatModeName = (mode: string) => {
+    if (mode === 'airplane') return 'Flight';
     return mode.charAt(0).toUpperCase() + mode.slice(1);
   };
 
