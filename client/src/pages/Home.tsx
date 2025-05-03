@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Box, 
@@ -13,7 +13,7 @@ import ExploreIcon from '@mui/icons-material/Explore';
 import NatureIcon from '@mui/icons-material/Nature';
 import SaveIcon from '@mui/icons-material/Save';
 import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
-import { motion } from 'framer-motion';
+import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../utils/AuthContext';
 import PlantButton from '../components/PlantButton';
 
@@ -37,11 +37,15 @@ const MotionBox = motion(Box);
 const MotionPaper = motion(Paper);
 const MotionGrid = motion(Grid);
 
+// Create a continuous cycle animation component
 const LottieAnimation: React.FC = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef1 = useRef<HTMLDivElement>(null);
+  const containerRef2 = useRef<HTMLDivElement>(null);
+  const controls1 = useAnimation();
+  const controls2 = useAnimation();
   
+  // Set up the Lottie player script
   useEffect(() => {
-    // Add script to document if it doesn't exist
     if (!document.querySelector('script[src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs"]')) {
       const script = document.createElement('script');
       script.src = "https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs";
@@ -49,20 +53,24 @@ const LottieAnimation: React.FC = () => {
       document.head.appendChild(script);
       
       script.onload = () => {
-        addLottiePlayer();
+        addLottiePlayer(containerRef1.current);
+        addLottiePlayer(containerRef2.current);
       };
       
       return () => {
-        document.head.removeChild(script);
+        if (script.parentNode) {
+          document.head.removeChild(script);
+        }
       };
     } else {
-      addLottiePlayer();
+      addLottiePlayer(containerRef1.current);
+      addLottiePlayer(containerRef2.current);
     }
   }, []);
   
-  const addLottiePlayer = () => {
-    if (containerRef.current) {
-      containerRef.current.innerHTML = '';
+  const addLottiePlayer = (container: HTMLDivElement | null) => {
+    if (container) {
+      container.innerHTML = '';
       const player = document.createElement('dotlottie-player');
       player.setAttribute('src', 'https://lottie.host/d4569193-4cff-4ace-8077-eb5fb839f13b/iByK0J7SHr.lottie');
       player.setAttribute('background', 'transparent');
@@ -71,11 +79,80 @@ const LottieAnimation: React.FC = () => {
       player.setAttribute('autoplay', '');
       player.style.width = '100%';
       player.style.height = '100%';
-      containerRef.current.appendChild(player);
+      container.appendChild(player);
     }
   };
+
+  // Animation cycle with two elements for continuous motion
+  useEffect(() => {
+    const animationDuration = 12; // Reduced from 20 to 12 for faster animation
+    
+    // Start first animation cycle
+    const cycle1 = async () => {
+      controls1.start({
+        x: ['calc(-100% - 400px)', 'calc(100vw + 400px)'],
+        transition: {
+          duration: animationDuration,
+          ease: 'linear',
+          repeat: Infinity,
+          repeatType: 'loop'
+        }
+      });
+    };
+    
+    // Start second animation cycle with offset
+    const cycle2 = async () => {
+      // Start the second animation at the halfway point
+      controls2.start({
+        x: ['calc(-100% - 400px)', 'calc(100vw + 400px)'],
+        transition: {
+          duration: animationDuration,
+          ease: 'linear',
+          repeat: Infinity,
+          repeatType: 'loop',
+          delay: animationDuration / 2 // Start halfway through the first cycle
+        }
+      });
+    };
+    
+    cycle1();
+    cycle2();
+    
+    return () => {
+      controls1.stop();
+      controls2.stop();
+    };
+  }, [controls1, controls2]);
   
-  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+  return (
+    <>
+      <MotionBox
+        animate={controls1}
+        initial={{ x: 'calc(-100% - 400px)' }}
+        style={{ 
+          position: 'absolute',
+          width: '400px',
+          height: '100%',
+          left: 0
+        }}
+      >
+        <div ref={containerRef1} style={{ width: '100%', height: '100%' }} />
+      </MotionBox>
+      
+      <MotionBox
+        animate={controls2}
+        initial={{ x: 'calc(-100% - 400px)' }}
+        style={{ 
+          position: 'absolute',
+          width: '400px',
+          height: '100%',
+          left: 0
+        }}
+      >
+        <div ref={containerRef2} style={{ width: '100%', height: '100%' }} />
+      </MotionBox>
+    </>
+  );
 };
 
 const Home: React.FC = () => {
@@ -105,7 +182,7 @@ const Home: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg">
+    <Container maxWidth={false} disableGutters sx={{ overflow: 'hidden' }}>
       {/* Hero Section */}
       <MotionBox
         sx={{
@@ -114,13 +191,39 @@ const Home: React.FC = () => {
           flexDirection: { xs: 'column', md: 'row' },
           alignItems: 'center',
           justifyContent: 'space-between',
-          py: 6
+          py: 6,
+          position: 'relative',
+          overflow: 'hidden',
+          px: { xs: 2, md: 10 },
+          mb: { xs: -8, md: -12 }
         }}
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <Box sx={{ flex: 1, pr: { md: 6 }, mb: { xs: 4, md: 0 } }}>
+        {/* Cycling Animation - Moved to top of the hero section */}
+        <Box 
+          sx={{
+            position: 'absolute',
+            width: '100%',
+            height: { xs: '150px', md: '200px' },
+            left: 0,
+            right: 0,
+            top: '10%', // Changed from bottom to top
+            zIndex: 10,
+            overflow: 'visible'
+          }}
+        >
+          <LottieAnimation />
+        </Box>
+
+        <Box sx={{ 
+          flex: 1, 
+          pr: { md: 6 }, 
+          mb: { xs: 4, md: 0 },
+          zIndex: 1,
+          mt: { xs: '150px', md: '100px' } // Added margin top to push content below animation
+        }}>
           <Typography
             variant="h1"
             sx={{
@@ -187,26 +290,15 @@ const Home: React.FC = () => {
             )}
           </Box>
         </Box>
-
-        <Box 
-          sx={{
-            maxWidth: { xs: '100%', md: '300px' },
-            height: { xs: '200px', md: '300px' },
-            borderRadius: 4,
-            overflow: 'hidden'
-          }}
-        >
-          <LottieAnimation />
-        </Box>
       </MotionBox>
 
       {/* Features Section */}
-      <Box sx={{ py: 8 }}>
+      <Box sx={{ py: { xs: 4, md: 6 } }}>
         <Typography 
           variant="h2" 
           align="center" 
           gutterBottom
-          sx={{ mb: 6, color: theme.palette.primary.dark }}
+          sx={{ mb: 2, color: theme.palette.primary.dark }}
         >
           Eco-Friendly Navigation Made Easy
         </Typography>
@@ -219,7 +311,7 @@ const Home: React.FC = () => {
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
         >
-          <Grid item xs={12} md={6} lg={3}>
+          <Grid item xs={12} md={2} lg={3}>
             <MotionPaper
               variants={itemVariants}
               sx={{
