@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Box, 
@@ -16,11 +16,67 @@ import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import { motion } from 'framer-motion';
 import { useAuth } from '../utils/AuthContext';
 import PlantButton from '../components/PlantButton';
-import cycleImage from '../cycle.png';
+
+// Add type declaration for the dotlottie-player element
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'dotlottie-player': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement> & {
+        src?: string;
+        background?: string;
+        speed?: string;
+        loop?: boolean;
+        autoplay?: boolean;
+        style?: React.CSSProperties;
+      }, HTMLElement>;
+    }
+  }
+}
 
 const MotionBox = motion(Box);
 const MotionPaper = motion(Paper);
 const MotionGrid = motion(Grid);
+
+const LottieAnimation: React.FC = () => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Add script to document if it doesn't exist
+    if (!document.querySelector('script[src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs"]')) {
+      const script = document.createElement('script');
+      script.src = "https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs";
+      script.type = "module";
+      document.head.appendChild(script);
+      
+      script.onload = () => {
+        addLottiePlayer();
+      };
+      
+      return () => {
+        document.head.removeChild(script);
+      };
+    } else {
+      addLottiePlayer();
+    }
+  }, []);
+  
+  const addLottiePlayer = () => {
+    if (containerRef.current) {
+      containerRef.current.innerHTML = '';
+      const player = document.createElement('dotlottie-player');
+      player.setAttribute('src', 'https://lottie.host/d4569193-4cff-4ace-8077-eb5fb839f13b/iByK0J7SHr.lottie');
+      player.setAttribute('background', 'transparent');
+      player.setAttribute('speed', '1');
+      player.setAttribute('loop', '');
+      player.setAttribute('autoplay', '');
+      player.style.width = '100%';
+      player.style.height = '100%';
+      containerRef.current.appendChild(player);
+    }
+  };
+  
+  return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+};
 
 const Home: React.FC = () => {
   const theme = useTheme();
@@ -133,16 +189,15 @@ const Home: React.FC = () => {
         </Box>
 
         <Box 
-          component="img"
-          src={cycleImage}
-          alt="Eco-friendly Cycling"
           sx={{
-            maxWidth: { xs: '60%', md: '30%' },
-            height: 'auto',
+            maxWidth: { xs: '100%', md: '300px' },
+            height: { xs: '200px', md: '300px' },
             borderRadius: 4,
-            boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+            overflow: 'hidden'
           }}
-        />
+        >
+          <LottieAnimation />
+        </Box>
       </MotionBox>
 
       {/* Features Section */}
