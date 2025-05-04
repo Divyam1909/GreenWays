@@ -33,7 +33,7 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import NatureIcon from '@mui/icons-material/Nature';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import { motion } from 'framer-motion';
-import { getRouteOptions, saveRoute } from '../services/api';
+import { getRouteOptions, saveRoute, getGeminiFeedback } from '../services/api';
 import { useAuth } from '../utils/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader';
@@ -137,6 +137,13 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
   const [flightOriginAirport, setFlightOriginAirport] = useState<any>(null);
   const [flightDestAirport, setFlightDestAirport] = useState<any>(null);
   
+  const [geminiFeedback, setGeminiFeedback] = useState<string>('');
+  const [geminiLoading, setGeminiLoading] = useState(false);
+  const [geminiError, setGeminiError] = useState<string | null>(null);
+  
+  // Add state for feedback modal
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  
   useEffect(() => {
     if (!googleMapsApiKey || googleMapsApiKey === 'YOUR_GOOGLE_MAPS_API_KEY' || googleMapsApiKey === 'YOUR_ACTUAL_GOOGLE_MAPS_API_KEY') {
       setMapApiError('Google Maps API key is missing or using a placeholder value. Please add your API key to the .env file.');
@@ -180,6 +187,10 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
     setFlightsError(null);
     setFlightOriginAirport(null);
     setFlightDestAirport(null);
+    setGeminiFeedback('');
+    setGeminiLoading(false);
+    setGeminiError(null);
+    setFeedbackModalOpen(false);
   }, []);
 
   // Initialize/reset component state on first load
@@ -402,22 +413,24 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
     setDestAutocomplete(autocomplete);
   };
 
-  // Don't put hooks inside conditionals - move the authLoading check inside the useEffect
+  // Fetch Gemini feedback when routeOptions or user changes
   useEffect(() => {
-    if (!authLoading) {
-      // This forces a component update
-      const timer = setTimeout(() => {
-        if (user) {
-          console.log("Route planner ready, user authenticated:", user.name);
-        } else {
-          console.log("Route planner ready, user not authenticated");
-        }
-      }, 10);
-      return () => clearTimeout(timer);
+    if (routeOptions.length > 0) {
+      setGeminiLoading(true);
+      setGeminiError(null);
+      getGeminiFeedback(routeOptions, user)
+        .then((feedback) => setGeminiFeedback(feedback))
+        .catch((err) => {
+          setGeminiError('Could not fetch personalized feedback.');
+          setGeminiFeedback('');
+        })
+        .finally(() => setGeminiLoading(false));
+    } else {
+      setGeminiFeedback('');
     }
-  }, [authLoading, user]);
+  }, [routeOptions, user]);
 
-  // Display loading screen during authentication check
+  // Now, after all hooks:
   if (authLoading) {
     return <Box 
       sx={{ 
@@ -595,44 +608,64 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
 
               {/* Environmental Impact Section */}
               {selectedRoute && (
-                <Paper 
-                  elevation={2} 
-                  sx={{ mt: 3, p: 3, borderRadius: 2, borderLeft: `6px solid ${theme.palette.primary.main}` }}
-                >
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                    Environmental Impact
-                  </Typography>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <LocalGasStationIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                        <Typography>
-                          <strong>CO2 Emission:</strong> {selectedRoute.carbonEmission} kg
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <SpeedIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                        <Typography>
-                          <strong>Distance:</strong> {selectedRoute.distance.text}
-                        </Typography>
-                      </Box>
+                <>
+                  <Paper 
+                    elevation={2} 
+                    sx={{ mt: 3, p: 3, borderRadius: 2, borderLeft: `6px solid ${theme.palette.primary.main}` }}
+                  >
+                    <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                      Environmental Impact
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <LocalGasStationIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                          <Typography>
+                            <strong>CO2 Emission:</strong> {selectedRoute.carbonEmission} kg
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <SpeedIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                          <Typography>
+                            <strong>Distance:</strong> {selectedRoute.distance.text}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                          <AccessTimeIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                          <Typography>
+                            <strong>Duration:</strong> {selectedRoute.duration.text}
+                          </Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                          <NatureIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
+                          <Typography>
+                            <strong>Mode:</strong> {formatModeName(selectedRoute.mode)}
+                          </Typography>
+                        </Box>
+                      </Grid>
                     </Grid>
-                    <Grid item xs={12} md={6}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                        <AccessTimeIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                        <Typography>
-                          <strong>Duration:</strong> {selectedRoute.duration.text}
-                        </Typography>
-                      </Box>
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <NatureIcon sx={{ mr: 1, color: theme.palette.primary.main }} />
-                        <Typography>
-                          <strong>Mode:</strong> {formatModeName(selectedRoute.mode)}
-                        </Typography>
-                      </Box>
-                    </Grid>
-                  </Grid>
-                </Paper>
+                  </Paper>
+                  {/* Eco-Friendly Recommendations below Environmental Impact */}
+                  {recommendations.length > 0 && (
+                    <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mt: 3 }}>
+                      <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
+                        Eco-Friendly Recommendations
+                      </Typography>
+                      <List dense>
+                        {recommendations.map((recommendation, index) => (
+                          <ListItem key={index}>
+                            <ListItemIcon sx={{ minWidth: '40px' }}>
+                              <NatureIcon color="primary" />
+                            </ListItemIcon>
+                            <ListItemText primary={recommendation} />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Paper>
+                  )}
+                </>
               )}
             </Grid>
 
@@ -643,7 +676,16 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
               </Typography>
               
               <Box sx={{ mb: 3 }}>
-                {routeOptions.map((route, index) => (
+                {/* Button to show Gemini Personalized Feedback in a modal */}
+                {routeOptions.length > 0 && (
+                  <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center' }}>
+                    <PlantButton onClick={() => setFeedbackModalOpen(true)}>
+                      Show Personalized Feedback
+                    </PlantButton>
+                  </Box>
+                )}
+                {/* Filter out 'transit' mode from route options */}
+                {routeOptions.filter(route => route.mode !== 'transit').map((route, index) => (
                   <Card 
                     key={index}
                     elevation={selectedRoute === route ? 3 : 1}
@@ -685,7 +727,6 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
                           )}
                         </Box>
                       </Box>
-                      
                       <Grid container spacing={1}>
                         <Grid item xs={6}>
                           <Typography variant="body2" color="textSecondary">
@@ -717,24 +758,6 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
                     Save Route
                   </PlantButton>
                 </Box>
-              )}
-
-              {recommendations.length > 0 && (
-                <Paper elevation={2} sx={{ p: 3, borderRadius: 2, mb: 3 }}>
-                  <Typography variant="h6" gutterBottom sx={{ fontWeight: 600 }}>
-                    Eco-Friendly Recommendations
-                  </Typography>
-                  <List dense>
-                    {recommendations.map((recommendation, index) => (
-                      <ListItem key={index}>
-                        <ListItemIcon sx={{ minWidth: '40px' }}>
-                          <NatureIcon color="primary" />
-                        </ListItemIcon>
-                        <ListItemText primary={recommendation} />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Paper>
               )}
             </Grid>
           </Grid>
@@ -811,6 +834,47 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
           <Button onClick={() => setFlightsModalOpen(false)} sx={{ mt: 2 }}>
             Close
           </Button>
+        </Box>
+      </Modal>
+
+      {/* Gemini Feedback Modal */}
+      <Modal open={feedbackModalOpen} onClose={() => setFeedbackModalOpen(false)}>
+        <Box>
+          <Box sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: 400,
+            bgcolor: 'background.paper',
+            border: '2px solid',
+            borderColor: theme.palette.primary.main,
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+          }}>
+            <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
+              Personalized Feedback
+            </Typography>
+            {geminiLoading ? (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, my: 2 }}>
+                <CircularProgress size={24} />
+                <Typography>Getting personalized insights...</Typography>
+              </Box>
+            ) : geminiError ? (
+              <Alert severity="error">{geminiError}</Alert>
+            ) : geminiFeedback ? (
+              <Typography sx={{ whiteSpace: 'pre-line', textAlign: 'left', my: 2 }}>{geminiFeedback}</Typography>
+            ) : null}
+            <Button onClick={() => setFeedbackModalOpen(false)} sx={{ mt: 2 }} variant="outlined" color="primary">
+              Close
+            </Button>
+          </Box>
         </Box>
       </Modal>
     </Box>

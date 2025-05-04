@@ -268,4 +268,58 @@ export const checkApiHealth = async () => {
   }
 };
 
+// Gemini API integration for personalized feedback
+export const getGeminiFeedback = async (routeOptions: any[], user: any) => {
+  const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || 'AIzaSyCKfzoOyl-M_JYKr9HUib4kHuKGemUySww';
+  // Use the Gemini 1.5 Flash model for free, fast responses
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  // Compose a highly personalized, engaging, and fun prompt for Gemini
+  const originName = routeOptions[0]?.origin || 'your starting point';
+  const destName = routeOptions[0]?.destination || 'your destination';
+  const prompt = `You are a world-class sustainability and travel expert who gives advice that is fun, motivating, and memorable. Given the following route options and user profile, provide feedback that is:
+- Short, concise, and highly accurate
+- Super engaging, interesting, and fun to read
+- Motivating and positive, encouraging greener travel
+- Packed with practical, knowledgeable tips
+- Output ONLY a bulleted list (using dashes), with each point left-aligned (no indentation, no centering, no formatting)
+- Do NOT use bold, asterisks, or any Markdown formatting—just plain text
+- Make the feedback highly personalized to the user's journey from ${originName} to ${destName}
+- End with a motivating, fun line that references their trip from ${originName} to ${destName}
+- After the motivation, add 2-3 interesting, fun, or eco-related facts about ${destName} as the last bullets in the list
+
+ROUTE OPTIONS:
+${routeOptions.map((route, i) => `Option ${i+1}: Mode: ${route.mode}, Distance: ${route.distance.text}, Duration: ${route.duration.text}, CO2: ${route.carbonEmission}kg`).join('\n')}
+
+USER PROFILE:
+${user ? `Name: ${user.name}` : 'No user profile.'}
+
+Instructions:
+- Recommend the best route for sustainability and practicality as a bullet point, referencing the trip from ${originName} to ${destName}
+- Give 1-2 actionable, on-point tips to reduce carbon footprint, as bullet points, personalized to this journey
+- Make it friendly, knowledgeable, and easy to read
+- End with a motivating, fun line to inspire the traveler to make greener choices on their way from ${originName} to ${destName}
+- After the motivation, add 2-3 interesting, fun, or eco-related facts about ${destName} as the last bullets in the list
+- Do not use paragraphs, prose, or any formatting—output only a left-aligned bulleted list
+- Be brief, but make every point interesting and memorable.`;
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    });
+    const data = await response.json();
+    // Gemini returns the text in data.candidates[0].content.parts[0].text
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text || 'No feedback available.';
+  } catch (error) {
+    console.error('Gemini API error:', error);
+    return 'Could not fetch personalized feedback at this time.';
+  }
+};
+
 export default api; 
