@@ -159,7 +159,7 @@ const Login: React.FC = () => {
             type="submit"
             disabled={loading}
           >
-            {loading ? <Loader /> : 'Sign In'}
+            Sign In
           </PlantButton>
           
           <Typography variant="body2" align="center" sx={{ mt: 2 }}>

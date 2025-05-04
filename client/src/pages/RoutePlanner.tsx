@@ -15,7 +15,10 @@ import {
   Alert,
   useTheme,
   Snackbar,
-  AlertTitle
+  AlertTitle,
+  Modal,
+  Button,
+  CircularProgress
 } from '@mui/material';
 import { GoogleMap, LoadScript, DirectionsRenderer, Autocomplete as GoogleAutocomplete } from '@react-google-maps/api';
 import DirectionsCarIcon from '@mui/icons-material/DirectionsCar';
@@ -121,8 +124,18 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
   // Libraries needed for Places API
   const libraries = useMemo(() => ['places'], []);
   
+  // Track if Google Maps script is loaded
+  const [mapsLoaded, setMapsLoaded] = useState(false);
+  
   // Check if API key is valid
   const [mapApiError, setMapApiError] = useState<string | null>(null);
+  
+  const [flightsModalOpen, setFlightsModalOpen] = useState(false);
+  const [flightsLoading, setFlightsLoading] = useState(false);
+  const [flights, setFlights] = useState<any[]>([]);
+  const [flightsError, setFlightsError] = useState<string | null>(null);
+  const [flightOriginAirport, setFlightOriginAirport] = useState<any>(null);
+  const [flightDestAirport, setFlightDestAirport] = useState<any>(null);
   
   useEffect(() => {
     if (!googleMapsApiKey || googleMapsApiKey === 'YOUR_GOOGLE_MAPS_API_KEY' || googleMapsApiKey === 'YOUR_ACTUAL_GOOGLE_MAPS_API_KEY') {
@@ -131,6 +144,54 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
       setMapApiError(null);
     }
   }, [googleMapsApiKey]);
+
+  // Handle Google Maps script loading
+  const handleMapsLoaded = useCallback(() => {
+    console.log("Google Maps Script loaded successfully");
+    setMapsLoaded(true);
+  }, []);
+
+  // Handle script error
+  const handleMapsError = useCallback((error: Error) => {
+    console.error("Error loading Google Maps Script:", error);
+    setMapApiError("Failed to load Google Maps. Please refresh and try again.");
+  }, []);
+
+  // Reset all state data
+  const resetState = useCallback(() => {
+    setOrigin('');
+    setDestination('');
+    setLoading(false);
+    setDirectionsLoading(false);
+    setError(null);
+    setRouteOptions([]);
+    setSelectedRoute(null);
+    setDirections(null);
+    setRecommendations([]);
+    setSavedMessage(null);
+    setSaveError(null);
+    setNotificationOpen(false);
+    setMapCenter(defaultCenter);
+    setOriginAutocomplete(null);
+    setDestAutocomplete(null);
+    setFlightsModalOpen(false);
+    setFlightsLoading(false);
+    setFlights([]);
+    setFlightsError(null);
+    setFlightOriginAirport(null);
+    setFlightDestAirport(null);
+  }, []);
+
+  // Initialize/reset component state on first load
+  useEffect(() => {
+    // Reset state when component mounts
+    resetState();
+    
+    // Clean up when component unmounts
+    return () => {
+      resetState();
+    };
+  }, [resetState]);
 
   // Get mode icon based on transportation mode
   const getModeIcon = (mode: string) => {
@@ -202,49 +263,51 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
 
   // Fetch directions from Google Maps API
   const fetchDirections = useCallback((origin: string, destination: string, mode: string) => {
-    if (!window.google) return;
-    
+    if (!window.google || !mapsLoaded) {
+      console.error("Google Maps not loaded yet. Please try again.");
+      setError("Google Maps not loaded yet. Please try again.");
+      return;
+    }
     setDirectionsLoading(true);
-    
-    // For airplane mode, we simply don't show directions on the map
     if (mode === 'airplane') {
       setDirections(null);
       setDirectionsLoading(false);
       return;
     }
-    
-    // For train and bus, use transit mode with Google
     const googleMode = (mode === 'train' || mode === 'bus') ? 'transit' : mode;
-    
-    // Additional parameters for transit modes
-    const transitParams: { [key: string]: string } = {};
+    let transitOptions: any = undefined;
     if (googleMode === 'transit') {
       if (mode === 'train') {
-        transitParams.transit_mode = 'train';
+        transitOptions = { modes: ['TRAIN'] };
       } else if (mode === 'bus') {
-        transitParams.transit_mode = 'bus';
+        transitOptions = { modes: ['BUS'] };
       }
     }
-    
-    const directionsService = new google.maps.DirectionsService();
-    directionsService.route(
-      {
-        origin,
-        destination,
-        travelMode: googleMode.toUpperCase() as google.maps.TravelMode,
-        ...transitParams
-      },
-      (result, status) => {
-        if (status === 'OK') {
-          setDirections(result);
-        } else {
-          console.error(`Error fetching directions: ${status}`);
-          setError(`Could not display route map: ${status}`);
+    try {
+      const directionsService = new google.maps.DirectionsService();
+      directionsService.route(
+        {
+          origin,
+          destination,
+          travelMode: googleMode.toUpperCase() as google.maps.TravelMode,
+          ...(transitOptions ? { transitOptions } : {})
+        },
+        (result, status) => {
+          if (status === 'OK') {
+            setDirections(result);
+          } else {
+            console.error(`Error fetching directions: ${status}`);
+            setError(`Could not display route map: ${status}`);
+          }
+          setDirectionsLoading(false);
         }
-        setDirectionsLoading(false);
-      }
-    );
-  }, []);
+      );
+    } catch (err) {
+      console.error("Error calling directions service:", err);
+      setError("Failed to get directions. Please try again.");
+      setDirectionsLoading(false);
+    }
+  }, [mapsLoaded]);
 
   // Handle route selection
   const handleRouteSelect = (route: RouteOption) => {
@@ -341,10 +404,14 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
 
   // Don't put hooks inside conditionals - move the authLoading check inside the useEffect
   useEffect(() => {
-    if (!authLoading && user) {
+    if (!authLoading) {
       // This forces a component update
       const timer = setTimeout(() => {
-        console.log("Route planner ready, user authenticated:", user.name);
+        if (user) {
+          console.log("Route planner ready, user authenticated:", user.name);
+        } else {
+          console.log("Route planner ready, user not authenticated");
+        }
       }, 10);
       return () => clearTimeout(timer);
     }
@@ -368,6 +435,24 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
     </Box>;
   }
   
+  const handleShowFlights = async () => {
+    setFlightsModalOpen(true);
+    setFlightsLoading(true);
+    setFlightsError(null);
+    setFlights([]);
+    try {
+      const res = await fetch(`/api/flights?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}`);
+      const data = await res.json();
+      setFlights(data.flights);
+      setFlightOriginAirport(data.originAirport);
+      setFlightDestAirport(data.destAirport);
+    } catch (err) {
+      setFlightsError('Failed to fetch flights.');
+    } finally {
+      setFlightsLoading(false);
+    }
+  };
+
   return (
     <Box
       component={motion.div}
@@ -391,7 +476,13 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
       </Typography>
 
       {/* Search Form */}
-      <LoadScript googleMapsApiKey={googleMapsApiKey} libraries={libraries as any}>
+      <LoadScript 
+        googleMapsApiKey={googleMapsApiKey} 
+        libraries={libraries as any}
+        loadingElement={<Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><Loader /></Box>}
+        onLoad={handleMapsLoaded}
+        onError={handleMapsError}
+      >
         <Paper 
           component={motion.form}
           variants={itemVariants}
@@ -439,7 +530,7 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
                 type="submit"
                 disabled={!origin || !destination || loading || !!mapApiError}
               >
-                {loading ? <Loader /> : 'Find Routes'}
+                Find Routes
               </PlantButton>
             </Grid>
             
@@ -623,7 +714,7 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
                     onClick={handleSaveRoute}
                     disabled={!selectedRoute || loading}
                   >
-                    {loading ? <Loader /> : 'Save Route'}
+                    Save Route
                   </PlantButton>
                 </Box>
               )}
@@ -644,6 +735,16 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
                     ))}
                   </List>
                 </Paper>
+              )}
+
+              {selectedRoute && selectedRoute.mode === 'airplane' && (
+                <PlantButton
+                  onClick={handleShowFlights}
+                  disabled={loading}
+                  sx={{ mt: 2 }}
+                >
+                  Show Flights
+                </PlantButton>
               )}
             </Grid>
           </Grid>
@@ -667,6 +768,61 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
           {saveError || savedMessage}
         </Alert>
       </Snackbar>
+
+      <Modal open={flightsModalOpen} onClose={() => setFlightsModalOpen(false)}>
+        <Box sx={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 400,
+          bgcolor: 'background.paper',
+          border: '2px solid #000',
+          boxShadow: 24,
+          p: 4,
+          borderRadius: 2,
+          maxHeight: '80vh',
+          overflowY: 'auto'
+        }}>
+          <Typography variant="h6" gutterBottom>
+            Available Flights
+          </Typography>
+          {flightOriginAirport && flightDestAirport && (
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              {flightOriginAirport.name} ({flightOriginAirport.iata}) → {flightDestAirport.name} ({flightDestAirport.iata})
+            </Typography>
+          )}
+          {flightsLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', my: 2 }}>
+              <CircularProgress />
+            </Box>
+          ) : flightsError ? (
+            <Alert severity="error">{flightsError}</Alert>
+          ) : flights.length === 0 ? (
+            <Typography>No flights found for this route.</Typography>
+          ) : (
+            <List>
+              {flights.map((flight, idx) => (
+                <ListItem key={idx} divider>
+                  <ListItemText
+                    primary={`${flight.airline} ${flight.flight_number || ''}`}
+                    secondary={
+                      <>
+                        <div>Departure: {flight.departure ? new Date(flight.departure).toLocaleString() : 'N/A'}</div>
+                        <div>Arrival: {flight.arrival ? new Date(flight.arrival).toLocaleString() : 'N/A'}</div>
+                        <div>Status: {flight.status}</div>
+                      </>
+                    }
+                  />
+                </ListItem>
+              ))}
+            </List>
+          )}
+          <Button onClick={() => setFlightsModalOpen(false)} sx={{ mt: 2 }}>
+            Close
+          </Button>
+        </Box>
+      </Modal>
     </Box>
   );
 };

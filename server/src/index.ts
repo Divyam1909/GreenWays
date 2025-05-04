@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import routeRoutes from './routes/routes';
 import userRoutes from './routes/userRoutes';
+import flightsRouter from './routes/flights';
 
 dotenv.config();
 
@@ -118,6 +119,7 @@ process.on('SIGINT', async () => {
 // Routes
 app.use('/api/routes', routeRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/flights', flightsRouter);
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {

@@ -162,7 +162,7 @@ const Register: React.FC = () => {
             type="submit"
             disabled={loading}
           >
-            {loading ? <Loader /> : 'Create Account'}
+            Create Account
           </PlantButton>
           
           <Typography variant="body2" align="center" sx={{ mt: 2 }}>

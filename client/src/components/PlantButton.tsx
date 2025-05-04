@@ -133,10 +133,10 @@ const PlantButton: React.FC<PlantButtonProps> = ({
   return (
     <StyledWrapper 
       className={className ? `plant-button-wrapper ${className}` : 'plant-button-wrapper'}
-      colors={colors}
-      sizing={sizing}
-      fullWidth={fullWidth}
-      isDark={mode === 'dark'}
+      $colors={colors}
+      $sizing={sizing}
+      $fullWidth={fullWidth}
+      $isDark={mode === 'dark'}
     >
       <Component 
         type={component ? undefined : type} 
@@ -159,15 +159,15 @@ const PlantButton: React.FC<PlantButtonProps> = ({
 };
 
 interface StyledWrapperProps {
-  colors: any;
-  sizing: any;
-  fullWidth: boolean;
-  isDark: boolean;
+  $colors: any;
+  $sizing: any;
+  $fullWidth: boolean;
+  $isDark: boolean;
 }
 
 const StyledWrapper = styled.div<StyledWrapperProps>`
-  display: ${props => props.fullWidth ? 'block' : 'inline-block'};
-  width: ${props => props.fullWidth ? '100%' : 'auto'};
+  display: ${props => props.$fullWidth ? 'block' : 'inline-block'};
+  width: ${props => props.$fullWidth ? '100%' : 'auto'};
   position: relative;
   isolation: isolate; /* Create a new stacking context */
   
@@ -181,17 +181,17 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
 
   button, a {
     position: relative;
-    padding: ${props => props.sizing.padding};
-    background: ${props => props.colors.bg};
-    font-size: ${props => props.sizing.fontSize};
+    padding: ${props => props.$sizing.padding};
+    background: ${props => props.$colors.bg};
+    font-size: ${props => props.$sizing.fontSize};
     font-weight: 600;
-    color: ${props => props.colors.text};
-    border: ${props => props.colors.border || 'none'};
+    color: ${props => props.$colors.text};
+    border: ${props => props.$colors.border || 'none'};
     border-radius: 8px;
-    box-shadow: ${props => props.isDark ? 'none' : '0 2px 5px rgba(0,0,0,0.1)'};
+    box-shadow: ${props => props.$isDark ? 'none' : '0 2px 5px rgba(0,0,0,0.1)'};
     transition: all .3s ease-in-out;
     cursor: pointer;
-    width: ${props => props.fullWidth ? '100%' : 'auto'};
+    width: ${props => props.$fullWidth ? '100%' : 'auto'};
     overflow: visible;
     display: inline-flex;
     align-items: center;
@@ -200,9 +200,9 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     z-index: 1;
     
     &:hover {
-      background: ${props => props.colors.hover};
+      background: ${props => props.$colors.hover};
       border-radius: 8px 8px 24px 24px;
-      box-shadow: ${props => props.isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.15)'};
+      box-shadow: ${props => props.$isDark ? '0 4px 12px rgba(0,0,0,0.3)' : '0 4px 12px rgba(0,0,0,0.15)'};
       transform: translateY(-3px);
       color: #ffffff;
       text-shadow: 0 1px 2px rgba(0,0,0,0.2);
@@ -215,7 +215,7 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
       
       &:hover {
         border-radius: 8px;
-        background: ${props => props.colors.bg};
+        background: ${props => props.$colors.bg};
       }
     }
   }
@@ -378,24 +378,24 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     }
   }
 
-  .fil-leaf-1 {
-    fill: ${props => props.colors.leafColors.leaf1};
+  .icon-1 .fil-leaf-1 {
+    fill: ${props => props.$colors.leafColors.leaf1};
   }
 
-  .fil-leaf-2 {
-    fill: ${props => props.colors.leafColors.leaf2};
+  .icon-2 .fil-leaf-2 {
+    fill: ${props => props.$colors.leafColors.leaf2};
   }
 
-  .fil-leaf-3 {
-    fill: ${props => props.colors.leafColors.leaf3};
+  .icon-3 .fil-leaf-3 {
+    fill: ${props => props.$colors.leafColors.leaf3};
   }
   
-  .fil-leaf-4 {
-    fill: ${props => props.colors.leafColors.leaf4};
+  .icon-4 .fil-leaf-4 {
+    fill: ${props => props.$colors.leafColors.leaf4};
   }
   
-  .fil-leaf-5 {
-    fill: ${props => props.colors.leafColors.leaf5};
+  .icon-5 .fil-leaf-5 {
+    fill: ${props => props.$colors.leafColors.leaf5};
   }
 `;
 

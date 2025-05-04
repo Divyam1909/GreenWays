@@ -28,11 +28,11 @@ const Loader: React.FC<LoaderProps> = ({
   
   return (
     <StyledWrapper 
-      fullScreen={fullScreen}
-      color={theme.palette.primary.main}
-      colorLight={theme.palette.primary.light}
-      colorDark={theme.palette.primary.dark}
-      textColor={theme.palette.text.secondary}
+      $fullScreen={fullScreen}
+      $color={theme.palette.primary.main}
+      $colorLight={theme.palette.primary.light}
+      $colorDark={theme.palette.primary.dark}
+      $textColor={theme.palette.text.secondary}
     >
       <Box className="loader-container" sx={{ width: container, height: container }}>
         <div className="tree" style={{ width: tree, height: tree }}>
@@ -95,11 +95,11 @@ const Loader: React.FC<LoaderProps> = ({
 };
 
 interface StyledWrapperProps {
-  fullScreen: boolean;
-  color: string;
-  colorLight: string;
-  colorDark: string;
-  textColor: string;
+  $fullScreen: boolean;
+  $color: string;
+  $colorLight: string;
+  $colorDark: string;
+  $textColor: string;
 }
 
 const StyledWrapper = styled.div<StyledWrapperProps>`
@@ -108,7 +108,7 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: ${props => props.fullScreen ? '100vh' : 'auto'};
+  height: ${props => props.$fullScreen ? '100vh' : 'auto'};
   
   .loader-container {
     position: relative;
@@ -129,7 +129,7 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
   }
   
   .loader-text {
-    color: ${props => props.textColor};
+    color: ${props => props.$textColor};
     text-align: center;
   }
 
@@ -165,7 +165,7 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(90deg, ${props => props.color}, ${props => props.colorLight});
+    background: linear-gradient(90deg, ${props => props.$color}, ${props => props.$colorLight});
     clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
     border-bottom: 5px solid rgba(0, 0, 0, 0.1);
     transform-origin: bottom;
@@ -178,7 +178,7 @@ const StyledWrapper = styled.div<StyledWrapperProps>`
     left: calc(50% - 7.5px);
     width: 15px;
     height: 50%;
-    background: linear-gradient(90deg, #8B4513, ${props => props.colorDark});
+    background: linear-gradient(90deg, #8B4513, ${props => props.$colorDark});
     border-bottom: 5px solid rgba(0, 0, 0, 0.1);
     transform-origin: bottom;
     transform: rotateY(calc(90deg * var(--i))) translateZ(7.5px);

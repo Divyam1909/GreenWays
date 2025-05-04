@@ -528,7 +528,7 @@ const SavedRoutes: React.FC = () => {
             onClick={handleDeleteRoute} 
             disabled={deleteLoading}
           >
-            {deleteLoading ? <Loader /> : 'Delete'}
+            Delete
           </PlantButton>
         </DialogActions>
       </Dialog>
