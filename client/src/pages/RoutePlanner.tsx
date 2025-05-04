@@ -736,16 +736,6 @@ const RoutePlanner: React.FC<RoutePlannerProps> = () => {
                   </List>
                 </Paper>
               )}
-
-              {selectedRoute && selectedRoute.mode === 'airplane' && (
-                <PlantButton
-                  onClick={handleShowFlights}
-                  disabled={loading}
-                  sx={{ mt: 2 }}
-                >
-                  Show Flights
-                </PlantButton>
-              )}
             </Grid>
           </Grid>
         )}
