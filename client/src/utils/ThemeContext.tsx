@@ -27,12 +27,24 @@ const getTheme = (mode: PaletteMode) => createTheme({
       dark: '#338a3e',
     },
     background: {
-      default: mode === 'dark' ? '#121212' : '#f5f5f5',
-      paper: mode === 'dark' ? '#1e1e1e' : '#ffffff',
+      default: mode === 'dark' ? '#121212' : '#e8f5e9', // Light green background for light mode
+      paper: mode === 'dark' ? '#1e1e1e' : '#f4fff6',   // Softer, green-tinted paper for light mode
     },
     text: {
-      primary: mode === 'dark' ? '#ffffff' : '#333333',
-      secondary: mode === 'dark' ? '#b0b0b0' : '#666666',
+      primary: mode === 'dark' ? '#ffffff' : '#204020', // Dark green text for light mode
+      secondary: mode === 'dark' ? '#b0b0b0' : '#388e3c', // Green accent for secondary text
+    },
+    success: {
+      main: '#43a047',
+      light: '#b9f6ca',
+      dark: '#00701a',
+      contrastText: '#fff',
+    },
+    info: {
+      main: '#81c784',
+      light: '#b2fab4',
+      dark: '#519657',
+      contrastText: '#204020',
     },
   },
   typography: {

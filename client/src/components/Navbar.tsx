@@ -134,6 +134,9 @@ const Navbar: React.FC = () => {
       <ListItem component={Link} to="/planner" onClick={handleDrawerToggle}>
         <ListItemText primary="Route Planner" />
       </ListItem>
+      <ListItem component={Link} to="/carbon-footprint" onClick={handleDrawerToggle}>
+        <ListItemText primary="Carbon Footprint Calculator" />
+      </ListItem>
       {isAuthenticated ? (
         <>
           <ListItem component={Link} to="/saved-routes" onClick={handleDrawerToggle}>
@@ -221,6 +224,9 @@ const Navbar: React.FC = () => {
                 </Button>
                 <Button color="inherit" component={StyledLink} to="/planner">
                   Route Planner
+                </Button>
+                <Button color="inherit" component={StyledLink} to="/carbon-footprint">
+                  Carbon Footprint Calculator
                 </Button>
                 
                 {isAuthenticated ? (

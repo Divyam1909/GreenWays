@@ -12,6 +12,10 @@ import { motion } from 'framer-motion';
 import { useAuth } from '../utils/AuthContext';
 import Loader from '../components/Loader';
 import PlantButton from '../components/PlantButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import IconButton from '@mui/material/IconButton';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 // Get the location state with TypeScript
 interface LocationState {
@@ -29,6 +33,8 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const theme = useTheme();
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
   
   // Get the redirect path or default to home
   const locationState = location.state as LocationState;
@@ -37,13 +43,11 @@ const Login: React.FC = () => {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated && !loading) {
+      setLoginSuccess(true);
       setRedirecting(true);
-      // Add a small delay before navigating to ensure all state changes have been processed
       const redirectTimer = setTimeout(() => {
-        // Force a page reload instead of using React Router navigation
         window.location.href = from;
-      }, 300);
-      
+      }, 700);
       return () => clearTimeout(redirectTimer);
     }
   }, [isAuthenticated, loading, from]);
@@ -62,9 +66,15 @@ const Login: React.FC = () => {
     try {
       await login(email, password);
       // Navigation happens in the useEffect after authentication state changes
-    } catch (err) {
-      console.error('Login error:', err);
-      // Error is handled by the auth context
+    } catch (err: any) {
+      // Improved error handling for network or unexpected errors
+      if (err?.message?.toLowerCase().includes('network')) {
+        setFormError('Network error. Please check your connection and try again.');
+      } else if (err?.response?.data?.message) {
+        setFormError(err.response.data.message);
+      } else {
+        setFormError('An unexpected error occurred. Please try again.');
+      }
     }
   };
 
@@ -128,6 +138,12 @@ const Login: React.FC = () => {
           </Alert>
         )}
         
+        {loginSuccess && (
+          <Alert severity="success" sx={{ mt: 3 }}>
+            Login successful! Redirecting...
+          </Alert>
+        )}
+        
         <Box component="form" onSubmit={handleSubmit}>
           <TextField
             fullWidth
@@ -145,7 +161,7 @@ const Login: React.FC = () => {
           <TextField
             fullWidth
             label="Password"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             margin="normal"
@@ -153,6 +169,19 @@ const Login: React.FC = () => {
             required
             disabled={loading}
             sx={{ mt: 2, mb: 3 }}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    onClick={() => setShowPassword((show) => !show)}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
           />
           
           <PlantButton

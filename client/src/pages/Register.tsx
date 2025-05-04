@@ -7,12 +7,16 @@ import {
   Paper,
   Alert,
   useTheme,
-  Grid
+  Grid,
+  InputAdornment,
+  IconButton
 } from '@mui/material';
 import { motion } from 'framer-motion';
 import { useAuth } from '../utils/AuthContext';
 import Loader from '../components/Loader';
 import PlantButton from '../components/PlantButton';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const Register: React.FC = () => {
   const [name, setName] = useState('');
@@ -23,11 +27,18 @@ const Register: React.FC = () => {
   const { register, loading, error, clearError, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const theme = useTheme();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registerSuccess, setRegisterSuccess] = useState(false);
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/planner');
+      setRegisterSuccess(true);
+      const timer = setTimeout(() => {
+        navigate('/planner');
+      }, 700);
+      return () => clearTimeout(timer);
     }
   }, [isAuthenticated, navigate]);
 
@@ -55,9 +66,15 @@ const Register: React.FC = () => {
     try {
       await register(name, email, password);
       // Navigation happens in the useEffect after authentication state changes
-    } catch (err) {
-      console.error('Registration error:', err);
-      // Error is handled by the auth context
+    } catch (err: any) {
+      // Improved error handling for network or unexpected errors
+      if (err?.message?.toLowerCase().includes('network')) {
+        setFormError('Network error. Please check your connection and try again.');
+      } else if (err?.response?.data?.message) {
+        setFormError(err.response.data.message);
+      } else {
+        setFormError('An unexpected error occurred. Please try again.');
+      }
     }
   };
 
@@ -103,6 +120,12 @@ const Register: React.FC = () => {
           </Alert>
         )}
         
+        {registerSuccess && (
+          <Alert severity="success" sx={{ mt: 3 }}>
+            Registration successful! Redirecting...
+          </Alert>
+        )}
+        
         <Box component="form" onSubmit={handleSubmit}>
           <TextField
             fullWidth
@@ -134,26 +157,52 @@ const Register: React.FC = () => {
               <TextField
                 fullWidth
                 label="Password"
-                type="password"
+                type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 margin="normal"
                 variant="outlined"
                 required
                 disabled={loading}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowPassword((show) => !show)}
+                        edge="end"
+                      >
+                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
               />
             </Grid>
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Confirm Password"
-                type="password"
+                type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 margin="normal"
                 variant="outlined"
                 required
                 disabled={loading}
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                        onClick={() => setShowConfirmPassword((show) => !show)}
+                        edge="end"
+                      >
+                        {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                      </IconButton>
+                    </InputAdornment>
+                  )
+                }}
               />
             </Grid>
           </Grid>

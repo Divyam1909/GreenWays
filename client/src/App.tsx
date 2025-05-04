@@ -8,6 +8,7 @@ import SavedRoutes from './pages/SavedRoutes';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import CarbonFootprintCalculator from './pages/CarbonFootprintCalculator';
 import Loader from './components/Loader';
 import { Box, Typography, Button } from '@mui/material';
 import { useAuth } from './utils/AuthContext';
@@ -176,6 +177,7 @@ function AppContent() {
                   <Profile />
                 </ProtectedRoute>
               } />
+              <Route path="/carbon-footprint" element={<CarbonFootprintCalculator />} />
             </Routes>
           </ErrorBoundary>
         </main>
